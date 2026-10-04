@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos Pessoais com Histórico</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b',
+                        darkBorder: '#334155',
+                        iceWhite: '#f8fafc',
+                        iceMuted: '#94a3b8',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16">
+    <div class="max-w-6xl mx-auto px-4 pt-6">
+        <!-- Header & Salary Section -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-darkCard p-6 rounded-2xl border border-darkBorder shadow-xl">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-iceWhite flex items-center gap-3">
+                    <i class="fa-solid fa-wallet text-emerald-400"></i>
+                    Controle Financeiro
+                </h1>
+                <p class="text-sm text-iceMuted mt-1">Gerencie seus gastos por categoria e arquive o histórico dos seus meses.</p>
+            </div>
+
+            <!-- Campo 4: Entrada de Salário no canto superior direito -->
+            <div class="w-full md:w-auto bg-darkBg p-4 rounded-xl border border-darkBorder flex items-center gap-3">
+                <div class="p-3 bg-emerald-500/10 rounded-lg text-emerald-400">
+                    <i class="fa-solid fa-money-bill-wave text-xl"></i>
+                </div>
+                <div>
+                    <label for="salaryInput" class="block text-xs font-medium text-iceMuted uppercase tracking-wider">Sua Receita / Salário</label>
+                    <div class="flex items-center gap-1 mt-0.5">
+                        <span class="text-emerald-400 font-bold">R$</span>
+                        <input type="number" id="salaryInput" placeholder="0,00" step="0.01" min="0"
+                            class="bg-transparent text-xl font-bold text-iceWhite focus:outline-none w-36 border-b border-transparent focus:border-emerald-500 transition-colors">
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Resumo Geral e Saldos -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-darkCard p-5 rounded-xl border border-darkBorder flex flex-col justify-between shadow-md">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs text-iceMuted uppercase font-semibold">Total Diário</span>
+                    <i class="fa-solid fa-calendar-day text-sky-400"></i>
+                </div>
+                <p class="text-2xl font-bold text-iceWhite" id="summaryDaily">R$ 0,00</p>
+            </div>
+
+            <div class="bg-darkCard p-5 rounded-xl border border-darkBorder flex flex-col justify-between shadow-md">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs text-iceMuted uppercase font-semibold">Total Semanal</span>
+                    <i class="fa-solid fa-calendar-week text-indigo-400"></i>
+                </div>
+                <p class="text-2xl font-bold text-iceWhite" id="summaryWeekly">R$ 0,00</p>
+            </div>
+
+            <div class="bg-darkCard p-5 rounded-xl border border-darkBorder flex flex-col justify-between shadow-md">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs text-iceMuted uppercase font-semibold">Total Mensal</span>
+                    <i class="fa-solid fa-calendar-days text-purple-400"></i>
+                </div>
+                <p class="text-2xl font-bold text-iceWhite" id="summaryMonthly">R$ 0,00</p>
+            </div>
+
+            <!-- Campo 5, 6 e 7: Saldo Final com iluminação Verde/Vermelho -->
+            <div id="balanceCard" class="bg-darkCard p-5 rounded-xl border border-darkBorder flex flex-col justify-between transition-all duration-300 shadow-md">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider opacity-90" id="balanceLabel">Saldo Restante</span>
+                    <i id="balanceIcon" class="fa-solid fa-scale-balanced"></i>
+                </div>
+                <p class="text-2xl font-black tracking-tight" id="balanceAmount">R$ 0,00</p>
+            </div>
+        </section>
+
+        <!-- Barra de Ações do Mês Vigente -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-darkCard p-4 rounded-xl border border-darkBorder mb-8">
+            <div class="flex items-center gap-2 text-sm text-iceMuted">
+                <i class="fa-solid fa-calendar-check text-emerald-400"></i>
+                <span>Ciclo atual em andamento</span>
+            </div>
+            <div class="flex flex-wrap gap-3 w-full sm:w-auto">
+                <button onclick="openCloseMonthModal()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-box-archive"></i> Guardar / Fechar Este Mês
+                </button>
+            </div>
+        </div>
+
+        <!-- Três Seções de Gastos (Diário, Semanal, Mensal) -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+            
+            <!-- Campo 1: Gastos Diários -->
+            <section class="bg-darkCard rounded-2xl border border-darkBorder p-5 flex flex-col justify-between shadow-lg">
+                <div>
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-darkBorder">
+                        <h2 class="text-lg font-bold text-iceWhite flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-sky-400 inline-block"></span>
+                            Gastos Diários
+                        </h2>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-sky-500/10 text-sky-400 rounded-full" id="dailyBadge">R$ 0,00</span>
+                    </div>
+
+                    <form onsubmit="addExpense(event, 'daily')" class="flex flex-col gap-3 mb-4">
+                        <input type="text" id="dailyDesc" placeholder="Descrição (ex: Almoço, Café)" required
+                            class="bg-darkBg text-sm text-iceWhite px-3 py-2.5 rounded-lg border border-darkBorder focus:outline-none focus:border-sky-400 transition-colors">
+                        <div class="flex gap-2">
+                            <input type="number" id="dailyAmount" placeholder="Valor (R$)" step="0.01" min="0.01" required
+                                class="bg-darkBg text-sm text-iceWhite px-3 py-2.5 rounded-lg border border-darkBorder focus:outline-none focus:border-sky-400 transition-colors w-full">
+                            <button type="submit" 
+                                class="bg-sky-500 hover:bg-sky-600 text-white font-medium px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 shrink-0">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <ul id="dailyList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></ul>
+                </div>
+            </section>
+
+            <!-- Campo 2: Gastos Semanais -->
+            <section class="bg-darkCard rounded-2xl border border-darkBorder p-5 flex flex-col justify-between shadow-lg">
+                <div>
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-darkBorder">
+                        <h2 class="text-lg font-bold text-iceWhite flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-indigo-400 inline-block"></span>
+                            Gastos Semanais
+                        </h2>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-500/10 text-indigo-400 rounded-full" id="weeklyBadge">R$ 0,00</span>
+                    </div>
+
+                    <form onsubmit="addExpense(event, 'weekly')" class="flex flex-col gap-3 mb-4">
+                        <input type="text" id="weeklyDesc" placeholder="Descrição (ex: Mercado semanal)" required
+                            class="bg-darkBg text-sm text-iceWhite px-3 py-2.5 rounded-lg border border-darkBorder focus:outline-none focus:border-indigo-400 transition-colors">
+                        <div class="flex gap-2">
+                            <input type="number" id="weeklyAmount" placeholder="Valor (R$)" step="0.01" min="0.01" required
+                                class="bg-darkBg text-sm text-iceWhite px-3 py-2.5 rounded-lg border border-darkBorder focus:outline-none focus:border-indigo-400 transition-colors w-full">
+                            <button type="submit" 
+                                class="bg-indigo-500 hover:bg-indigo-600 text-white font-medium px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 shrink-0">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <ul id="weeklyList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></ul>
+                </div>
+            </section>
+
+            <!-- Campo 3: Gastos Mensais -->
+            <section class="bg-darkCard rounded-2xl border border-darkBorder p-5 flex flex-col justify-between shadow-lg">
+                <div>
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-darkBorder">
+                        <h2 class="text-lg font-bold text-iceWhite flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-purple-400 inline-block"></span>
+                            Gastos Mensais
+                        </h2>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-purple-500/10 text-purple-400 rounded-full" id="monthlyBadge">R$ 0,00</span>
+                    </div>
+
+                    <form onsubmit="addExpense(event, 'monthly')" class="flex flex-col gap-3 mb-4">
+                        <input type="text" id="monthlyDesc" placeholder="Descrição (ex: Aluguel, Luz, Net)" required
+                            class="bg-darkBg text-sm text-iceWhite px-3 py-2.5 rounded-lg border border-darkBorder focus:outline-none focus:border-purple-400 transition-colors">
+                        <div class="flex gap-2">
+                            <input type="number" id="monthlyAmount" placeholder="Valor (R$)" step="0.01" min="0.01" required
+                                class="bg-darkBg text-sm text-iceWhite px-3 py-2.5 rounded-lg border border-darkBorder focus:outline-none focus:border-purple-400 transition-colors w-full">
+                            <button type="submit" 
+                                class="bg-purple-500 hover:bg-purple-600 text-white font-medium px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 shrink-0">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <ul id="monthlyList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></ul>
+                </div>
+            </section>
+        </main>
+
+        <!-- Histórico de Meses Guardados -->
+        <section class="bg-darkCard rounded-2xl border border-darkBorder p-6 shadow-xl mb-8">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-darkBorder">
+                <h2 class="text-xl font-bold text-iceWhite flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i>
+                    Histórico de Meses Fechados
+                </h2>
+                <span id="historyCountBadge" class="text-xs bg-darkBg text-iceMuted border border-darkBorder px-3 py-1 rounded-full font-medium">0 meses arquivados</span>
+            </div>
+
+            <div id="historyEmpty" class="text-center py-8 text-iceMuted">
+                <i class="fa-solid fa-folder-open text-4xl mb-3 block text-slate-600"></i>
+                <p>Nenhum mês arquivado até o momento.</p>
+                <p class="text-xs text-slate-500 mt-1">Ao terminar um ciclo, clique em "Guardar / Fechar Este Mês" para armazenar seus registros.</p>
+            </div>
+
+            <div id="historyTableContainer" class="overflow-x-auto hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs text-iceMuted border-b border-darkBorder uppercase">
+                            <th class="py-3 px-4">Mês/Ano</th>
+                            <th class="py-3 px-4">Receita / Salário</th>
+                            <th class="py-3 px-4">Total Gastos</th>
+                            <th class="py-3 px-4">Saldo Final</th>
+                            <th class="py-3 px-4 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody" class="divide-y divide-darkBorder/50 text-sm">
+                        <!-- Renderizado via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Botão Resetar Tudo -->
+        <div class="flex justify-end">
+            <button onclick="clearAllData()" class="text-xs text-red-400 hover:text-red-300 flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-lg transition-colors border border-red-500/20">
+                <i class="fa-solid fa-trash-can"></i> Resetar Todo o Sistema (Incluindo Histórico)
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Fechar e Archivar Mês -->
+    <div id="closeMonthModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-darkCard border border-darkBorder w-full max-w-md rounded-2xl p-6 shadow-2xl">
+            <h3 class="text-xl font-bold text-iceWhite mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-box-archive text-emerald-400"></i>
+                Guardar e Fechar Mês
+            </h3>
+            <p class="text-xs text-iceMuted mb-4">Escolha o nome/período para identificar estes registros no seu histórico.</p>
+
+            <div class="mb-4">
+                <label for="monthTitleInput" class="block text-xs font-semibold text-iceMuted uppercase mb-1">Identificação do Mês</label>
+                <input type="text" id="monthTitleInput" placeholder="Ex: Outubro / 2026"
+                    class="w-full bg-darkBg text-iceWhite px-3 py-2.5 rounded-lg border border-darkBorder focus:outline-none focus:border-emerald-400 text-sm">
+            </div>
+
+            <div class="bg-darkBg p-3 rounded-lg border border-darkBorder mb-6 space-y-1 text-xs text-iceMuted">
+                <div class="flex justify-between">
+                    <span>Total Gastos no Ciclo:</span>
+                    <strong class="text-iceWhite" id="modalTotalGastos">R$ 0,00</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span>Saldo Final:</span>
+                    <strong id="modalSaldoFinal">R$ 0,00</strong>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('closeMonthModal')" class="px-4 py-2 text-sm text-iceMuted hover:text-iceWhite transition-colors">Cancelar</button>
+                <button onclick="confirmCloseMonth()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors">Guardar e Iniciar Novo Mês</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Visualizar Detalhes do Mês Arquivado -->
+    <div id="viewMonthModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-darkCard border border-darkBorder w-full max-w-2xl rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-darkBorder">
+                <h3 class="text-xl font-bold text-iceWhite" id="viewMonthTitle">Detalhes do Mês</h3>
+                <button onclick="closeModal('viewMonthModal')" class="text-iceMuted hover:text-iceWhite"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div id="viewMonthDetails" class="space-y-4">
+                <!-- Conteúdo dinamico -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Structures
+        let appData = {
+            salary: 0,
+            daily: [],
+            weekly: [],
+            monthly: [],
+            history: [] // { id, title, salary, daily, weekly, monthly, closedAt }
+        };
+
+        window.onload = function() {
+            loadFromLocalStorage();
+            setupEventListeners();
+            renderApp();
+        };
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('control_gastos_app_data');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                    if (!appData.history) appData.history = [];
+                } catch (e) {
+                    console.error('Erro ao ler dados do localStorage:', e);
+                }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('control_gastos_app_data', JSON.stringify(appData));
+            renderApp();
+        }
+
+        function setupEventListeners() {
+            const salaryInput = document.getElementById('salaryInput');
+            if (appData.salary > 0) {
+                salaryInput.value = appData.salary;
+            }
+
+            salaryInput.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                appData.salary = isNaN(val) ? 0 : val;
+                saveData();
+            });
+        }
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+        }
+
+        function addExpense(event, category) {
+            event.preventDefault();
+            const descInput = document.getElementById(`${category}Desc`);
+            const amountInput = document.getElementById(`${category}Amount`);
+
+            const desc = descInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+
+            if (!desc || isNaN(amount) || amount <= 0) return;
+
+            const newItem = {
+                id: Date.now().toString(),
+                description: desc,
+                amount: amount
+            };
+
+            appData[category].push(newItem);
+            descInput.value = '';
+            amountInput.value = '';
+            descInput.focus();
+
+            saveData();
+        }
+
+        function removeExpense(category, id) {
+            appData[category] = appData[category].filter(item => item.id !== id);
+            saveData();
+        }
+
+        // --- FUNCIONALIDADE DE FECHAR MÊS ---
+        function openCloseMonthModal() {
+            const totalGastos = calculateTotalGastos(appData.daily, appData.weekly, appData.monthly);
+            const saldo = appData.salary - totalGastos;
+
+            document.getElementById('modalTotalGastos').innerText = formatCurrency(totalGastos);
+            
+            const saldoEl = document.getElementById('modalSaldoFinal');
+            saldoEl.innerText = formatCurrency(saldo);
+            saldoEl.className = saldo < 0 ? "font-bold text-red-400" : "font-bold text-emerald-400";
+
+            // Sugere Mês e Ano
+            const now = new Date();
+            const options = { month: 'long', year: 'numeric' };
+            const monthName = now.toLocaleDateString('pt-BR', options);
+            document.getElementById('monthTitleInput').value = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+            document.getElementById('closeMonthModal').classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function confirmCloseMonth() {
+            const titleInput = document.getElementById('monthTitleInput');
+            const title = titleInput.value.trim() || 'Mês Sem Nome';
+
+            const monthRecord = {
+                id: Date.now().toString(),
+                title: title,
+                salary: appData.salary,
+                daily: [...appData.daily],
+                weekly: [...appData.weekly],
+                monthly: [...appData.monthly],
+                closedAt: new Date().toLocaleDateString('pt-BR')
+            };
+
+            // Guarda no histórico
+            appData.history.unshift(monthRecord);
+
+            // Reseta mês atual para um novo ciclo
+            appData.daily = [];
+            appData.weekly = [];
+            appData.monthly = [];
+
+            closeModal('closeMonthModal');
+            saveData();
+        }
+
+        function deleteHistoryRecord(id) {
+            if (confirm('Deseja excluir este mês do seu histórico?')) {
+                appData.history = appData.history.filter(item => item.id !== id);
+                saveData();
+            }
+        }
+
+        function viewHistoryDetails(id) {
+            const record = appData.history.find(item => item.id === id);
+            if (!record) return;
+
+            document.getElementById('viewMonthTitle').innerText = `Histórico: ${record.title}`;
+
+            const totalDaily = calculateCategoryTotal(record.daily);
+            const totalWeekly = calculateCategoryTotal(record.weekly);
+            const totalMonthly = calculateCategoryTotal(record.monthly);
+            const totalGastos = totalDaily + totalWeekly + totalMonthly;
+            const saldo = record.salary - totalGastos;
+
+            const container = document.getElementById('viewMonthDetails');
+            container.innerHTML = `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-darkBg p-4 rounded-xl border border-darkBorder mb-4 text-xs">
+                    <div>
+                        <span class="text-iceMuted block">Salário/Entrada:</span>
+                        <strong class="text-emerald-400 text-sm">${formatCurrency(record.salary)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-iceMuted block">Total Gastos:</span>
+                        <strong class="text-red-400 text-sm">${formatCurrency(totalGastos)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-iceMuted block">Saldo Final:</span>
+                        <strong class="${saldo < 0 ? 'text-red-400' : 'text-emerald-400'} text-sm">${formatCurrency(saldo)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-iceMuted block">Fechado em:</span>
+                        <strong class="text-iceWhite text-sm">${record.closedAt}</strong>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    ${renderHistoryCategoryCard('Diários', record.daily)}
+                    ${renderHistoryCategoryCard('Semanais', record.weekly)}
+                    ${renderHistoryCategoryCard('Mensais', record.monthly)}
+                </div>
+            `;
+
+            document.getElementById('viewMonthModal').classList.remove('hidden');
+        }
+
+        function renderHistoryCategoryCard(title, items) {
+            const total = calculateCategoryTotal(items);
+            let html = `
+                <div class="bg-darkBg p-3 rounded-xl border border-darkBorder">
+                    <div class="flex justify-between items-center mb-2 pb-2 border-b border-darkBorder">
+                        <span class="font-bold text-xs text-iceWhite">${title}</span>
+                        <span class="text-xs font-semibold text-iceMuted">${formatCurrency(total)}</span>
+                    </div>
+                    <ul class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            `;
+
+            if (!items || items.length === 0) {
+                html += `<li class="text-xs text-iceMuted py-2 text-center">Sem lançamentos</li>`;
+            } else {
+                items.forEach(item => {
+                    html += `
+                        <li class="flex justify-between text-xs py-1 px-2 bg-darkCard rounded">
+                            <span class="text-iceWhite truncate">${escapeHtml(item.description)}</span>
+                            <span class="font-medium text-iceMuted ml-2">${formatCurrency(item.amount)}</span>
+                        </li>
+                    `;
+                });
+            }
+
+            html += `</ul></div>`;
+            return html;
+        }
+
+        function clearAllData() {
+            if (confirm('Atenção: Isso apagará TODOS os dados atuais e todo o histórico de meses guardados. Deseja continuar?')) {
+                appData = {
+                    salary: 0,
+                    daily: [],
+                    weekly: [],
+                    monthly: [],
+                    history: []
+                };
+                document.getElementById('salaryInput').value = '';
+                saveData();
+            }
+        }
+
+        // Helpers
+        function calculateCategoryTotal(list) {
+            return (list || []).reduce((acc, curr) => acc + curr.amount, 0);
+        }
+
+        function calculateTotalGastos(daily, weekly, monthly) {
+            return calculateCategoryTotal(daily) + calculateCategoryTotal(weekly) + calculateCategoryTotal(monthly);
+        }
+
+        // Render UI Main
+        function renderApp() {
+            const totalDaily = calculateCategoryTotal(appData.daily);
+            const totalWeekly = calculateCategoryTotal(appData.weekly);
+            const totalMonthly = calculateCategoryTotal(appData.monthly);
+            const totalGastos = totalDaily + totalWeekly + totalMonthly;
+
+            const balance = appData.salary - totalGastos;
+
+            // Retorno visual do resumo
+            document.getElementById('summaryDaily').innerText = formatCurrency(totalDaily);
+            document.getElementById('summaryWeekly').innerText = formatCurrency(totalWeekly);
+            document.getElementById('summaryMonthly').innerText = formatCurrency(totalMonthly);
+
+            document.getElementById('dailyBadge').innerText = formatCurrency(totalDaily);
+            document.getElementById('weeklyBadge').innerText = formatCurrency(totalWeekly);
+            document.getElementById('monthlyBadge').innerText = formatCurrency(totalMonthly);
+
+            // Renderização das listas
+            renderCategoryList('daily', appData.daily);
+            renderCategoryList('weekly', appData.weekly);
+            renderCategoryList('monthly', appData.monthly);
+
+            // Renderização de cores do Saldo (Campos 5, 6, 7)
+            const balanceCard = document.getElementById('balanceCard');
+            const balanceAmount = document.getElementById('balanceAmount');
+            const balanceLabel = document.getElementById('balanceLabel');
+            const balanceIcon = document.getElementById('balanceIcon');
+
+            balanceAmount.innerText = formatCurrency(balance);
+
+            if (balance < 0) {
+                // Negativo = Vermelho
+                balanceCard.className = "bg-red-500/10 border-2 border-red-500/50 p-5 rounded-xl flex flex-col justify-between text-red-400 shadow-lg shadow-red-500/10 transition-all duration-300";
+                balanceLabel.innerText = "Saldo Negativo (Déficit)";
+                balanceIcon.className = "fa-solid fa-triangle-exclamation text-red-400";
+            } else {
+                // Positivo = Verde
+                balanceCard.className = "bg-emerald-500/10 border-2 border-emerald-500/50 p-5 rounded-xl flex flex-col justify-between text-emerald-400 shadow-lg shadow-emerald-500/10 transition-all duration-300";
+                balanceLabel.innerText = "Saldo Positivo (Sobra)";
+                balanceIcon.className = "fa-solid fa-circle-check text-emerald-400";
+            }
+
+            // Renderização do Histórico
+            renderHistoryTable();
+        }
+
+        function renderCategoryList(category, items) {
+            const listEl = document.getElementById(`${category}List`);
+            listEl.innerHTML = '';
+
+            if (items.length === 0) {
+                listEl.innerHTML = `<li class="text-xs text-iceMuted text-center py-4 border border-dashed border-darkBorder rounded-lg">Nenhum gasto neste item</li>`;
+                return;
+            }
+
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-darkBg px-3 py-2 rounded-lg border border-darkBorder/60 group hover:border-darkBorder transition-colors";
+                li.innerHTML = `
+                    <div class="overflow-hidden pr-2">
+                        <p class="text-sm font-medium text-iceWhite truncate">${escapeHtml(item.description)}</p>
+                        <p class="text-xs font-semibold text-iceMuted">${formatCurrency(item.amount)}</p>
+                    </div>
+                    <button onclick="removeExpense('${category}', '${item.id}')" 
+                        class="text-iceMuted hover:text-red-400 p-1.5 rounded transition-colors opacity-80 group-hover:opacity-100" title="Excluir">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        function renderHistoryTable() {
+            const emptyEl = document.getElementById('historyEmpty');
+            const tableContainer = document.getElementById('historyTableContainer');
+            const tbody = document.getElementById('historyTableBody');
+            const badge = document.getElementById('historyCountBadge');
+
+            const count = appData.history ? appData.history.length : 0;
+            badge.innerText = `${count} ${count === 1 ? 'mês arquivado' : 'meses arquivados'}`;
+
+            if (count === 0) {
+                emptyEl.classList.remove('hidden');
+                tableContainer.classList.add('hidden');
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+            tableContainer.classList.remove('hidden');
+            tbody.innerHTML = '';
+
+            appData.history.forEach(record => {
+                const totalGastos = calculateTotalGastos(record.daily, record.weekly, record.monthly);
+                const saldo = record.salary - totalGastos;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-darkBg/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-semibold text-iceWhite">
+                        ${escapeHtml(record.title)}
+                        <span class="block text-[10px] text-iceMuted font-normal">Arquivado em ${record.closedAt}</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-emerald-400 font-medium">${formatCurrency(record.salary)}</td>
+                    <td class="py-3.5 px-4 text-iceMuted font-medium">${formatCurrency(totalGastos)}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${saldo < 0 ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}">
+                            ${formatCurrency(saldo)}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right space-x-2">
+                        <button onclick="viewHistoryDetails('${record.id}')" class="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-indigo-500/20">
+                            <i class="fa-solid fa-eye"></i> Ver
+                        </button>
+                        <button onclick="deleteHistoryRecord('${record.id}')" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border border-red-500/20" title="Apagar registro">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
